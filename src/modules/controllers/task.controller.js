@@ -8,7 +8,7 @@ const generateAccessToken = (id) => {
     const payload = {
         id
     }
-    return jwt.sign(payload, secret, {expiresIn: "24h"})
+    return jwt.sign(payload, secret, {expiresIn: "1h"})
 }
 
 module.exports.createNewUser = async (req, res) => {
@@ -51,9 +51,7 @@ module.exports.loginFunc = async (req, res) => {
 }
 
 module.exports.getTasks = (req, res) => {
-    const token = req.headers.authorization
-    const decodedData = jwt.verify(token, secret)
-    const id = decodedData.id
+    const id = req.user
     Task.find({userID: id}).then(result => {
         res.send({data: result})
     })
@@ -62,11 +60,8 @@ module.exports.getTasks = (req, res) => {
 module.exports.createNewTask = async (req, res) => {
     try {
         const {text, isCheck} = req.body
-        const token = req.headers.authorization
-        const decodedData = jwt.verify(token, secret)
-        const id = decodedData.id
+        const id = req.user
         const user = await User.findById(id)
-
         if (!user) {
             return res.status(400).json({message: `User not found!`})
         }
@@ -97,9 +92,7 @@ module.exports.checkTask = async (req, res) => {
 
 module.exports.checkAllTasks = async (req, res) => {
     try {
-        const token = req.headers.authorization
-        const decodedData = jwt.verify(token, secret)
-        const userID = decodedData.id
+        const userID = req.user
         const isCheck = true
         const result = await Task.updateMany({userID}, {isCheck}, {new: true})
         res.status(200).json(result)
@@ -110,9 +103,7 @@ module.exports.checkAllTasks = async (req, res) => {
 
 module.exports.deleteChecked = async (req, res) => {
     try {
-        const token = req.headers.authorization
-        const decodedData = jwt.verify(token, secret)
-        const userID = decodedData.id
+        const userID = req.user
         const isCheck = true
         const result = await Task.deleteMany({userID, isCheck})
         res.status(200).json(result)
