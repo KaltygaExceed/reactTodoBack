@@ -11,7 +11,7 @@ const generateAccessToken = (id) => {
     return jwt.sign(payload, secret, {expiresIn: "1h"})
 }
 
-module.exports.createNewUser = async (req, res) => {
+module.exports.createNewUser = async (req, res, next) => {
     try {
         const errors = validationResult(req)
         if (!errors.isEmpty()) {
@@ -28,11 +28,12 @@ module.exports.createNewUser = async (req, res) => {
             return res.status(400).json({message: 'Already registered user'})
         }
     } catch (error) {
-        res.status(400).json({error, message: 'Registration error'})
+        // res.status(400).json({error, message: 'Registration error'})
+        return next(error)
     }
 }
 
-module.exports.loginFunc = async (req, res) => {
+module.exports.loginFunc = async (req, res, next) => {
     try {
         const {username, password} = req.body
         const user = await User.findOne({username})
@@ -46,18 +47,27 @@ module.exports.loginFunc = async (req, res) => {
         const token = generateAccessToken(user._id)
         return res.json({token, message: 'Login successful'})
     } catch (error) {
-        res.status(400).json({error, message: 'Login error'})
+        // res.status(400).json({error, message: 'Login error'})
+        return next(error)
     }
 }
 
-module.exports.getTasks = (req, res) => {
-    const id = req.user
-    Task.find({userID: id}).then(result => {
-        res.send({data: result})
-    })
+module.exports.getTasks = async (req, res, next) => {
+    try {
+        const id = req.user
+        let allTasks = await Task.find({userID: id})
+        let edTasks = []
+        await allTasks.map((item) => {
+            edTasks.push({id: item._id, text: item.text, isCheck: item.isCheck})
+        })
+        return res.status(200).json(edTasks)
+    } catch (error) {
+        // res.status(400).json({error, message: 'Login error'})
+        return next(error)
+    }
 }
 
-module.exports.createNewTask = async (req, res) => {
+module.exports.createNewTask = async (req, res, next) => {
     try {
         const {text, isCheck} = req.body
         const id = req.user
@@ -69,7 +79,8 @@ module.exports.createNewTask = async (req, res) => {
         const taskID = newTask._id
         res.status(200).json({message: 'Task created!', taskID: taskID})
     } catch (error) {
-        res.status(400).json({error, message: 'Login error'})
+        // res.status(400).json({error, message: 'Login error'})
+        return next(error)
     }
 }
 
@@ -79,36 +90,39 @@ module.exports.deleteTask = (req, res) => {
     })
 }
 
-module.exports.checkTask = async (req, res) => {
+module.exports.checkTask = async (req, res, next) => {
     try {
         const _id = req.body.id
         const isCheck = req.body.isCheck
         const result = await Task.findOneAndUpdate({_id}, {isCheck}, {new: true})
         res.status(200).json(result)
     } catch (error) {
-        res.status(400).json(error)
+        // res.status(400).json(error)
+        return next(error)
     }
 }
 
-module.exports.checkAllTasks = async (req, res) => {
+module.exports.checkAllTasks = async (req, res, next) => {
     try {
         const userID = req.user
         const isCheck = true
         const result = await Task.updateMany({userID}, {isCheck}, {new: true})
         res.status(200).json(result)
     } catch (error) {
-        res.status(400).json(error)
+        // res.status(400).json(error)
+        return next(error)
     }
 }
 
-module.exports.deleteChecked = async (req, res) => {
+module.exports.deleteChecked = async (req, res, next) => {
     try {
         const userID = req.user
         const isCheck = true
         const result = await Task.deleteMany({userID, isCheck})
         res.status(200).json(result)
     } catch (error) {
-        res.status(400).json(error)
+        // res.status(400).json(error)
+        return next(error)
     }
 
 }
